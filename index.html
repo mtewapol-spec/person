@@ -1,0 +1,1471 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>ระบบบริหารจัดการข้อมูลการปฏิบัติงานเจ้าหน้าที่</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- SheetJS Library for Excel Parsing -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <style>
+        body { font-family: 'Sarabun', sans-serif; background-color: #f8fafc; color: #334155; -webkit-tap-highlight-color: transparent; }
+        
+        .tab-btn {
+            padding: 0.6rem 0.8rem;
+            font-size: 0.85rem;
+            white-space: nowrap;
+            border-bottom: 2px solid transparent;
+            color: #475569;
+            transition: all 0.2s;
+        }
+        .tab-btn.active {
+            border-bottom-color: #4f46e5;
+            color: #4f46e5;
+            background-color: #ffffff;
+            font-weight: 700;
+        }
+
+        .sum-view-btn {
+            padding: 0.4rem 0.75rem;
+            border-radius: 0.5rem;
+            font-size: 0.75rem;
+            font-weight: 600;
+            border: 1px solid #cbd5e1;
+            background: #f1f5f9;
+            color: #475569;
+            transition: all 0.15s;
+            touch-action: manipulation;
+        }
+        .sum-view-btn.active {
+            background: #4f46e5;
+            color: white;
+            border-color: #4f46e5;
+        }
+
+        .status-group { display: inline-flex; background: #f1f5f9; padding: 0.2rem; border-radius: 0.5rem; gap: 0.2rem; border: 1px solid #e2e8f0; width: 100%; justify-content: space-around; }
+        .btn-status { padding: 0.4rem 0.5rem; border: none; border-radius: 0.35rem; font-size: 0.75rem; font-weight: 600; cursor: pointer; color: #64748b; background: transparent; flex: 1; text-align: center; }
+        .btn-status.st-present { background: #059669; color: white; }
+        .btn-status.st-absent { background: #e11d48; color: white; }
+        .btn-status.st-duty { background: #0284c7; color: white; }
+        .btn-status.st-sub { background: #d97706; color: white; }
+        .input-remark { width: 100%; padding: 0.4rem 0.5rem; border: 1px solid #cbd5e1; border-radius: 0.375rem; font-size: 0.85rem; }
+
+        /* ปรับแต่งตารางสำหรับ Desktop ให้กระชับ */
+        .desktop-fit-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.75rem;
+        }
+        .desktop-fit-table th, .desktop-fit-table td {
+            padding: 0.35rem 0.25rem !important;
+            vertical-align: middle;
+            line-height: 1.25;
+        }
+        .cm-col {
+            text-align: center !important;
+            box-sizing: border-box;
+            font-size: 0.75rem !important;
+        }
+
+        .custom-scroll::-webkit-scrollbar { height: 6px; width: 6px; }
+        .custom-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+    </style>
+</head>
+<body class="bg-slate-50 min-h-screen pb-6 flex flex-col justify-between">
+
+    <div>
+        <!-- Global Top Header -->
+        <header class="bg-indigo-950 text-white shadow-lg sticky top-0 z-40 w-full">
+            <div class="w-full px-3 md:px-8 py-3 flex flex-col md:flex-row justify-between items-start md:items-center gap-2 md:gap-4">
+                <div class="w-full md:w-auto">
+                    <h1 class="text-lg md:text-xl font-bold tracking-wide">ระบบบริหารจัดการข้อมูลเจ้าหน้าที่</h1>
+                    <div class="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 mt-1">
+                        <span class="text-indigo-200 text-xs" id="headerPeriodLabel">ประจำปี 2570 รอบที่ 1/70 (1 ต.ค. 69 - 30 มี.ค. 70)</span>
+                        <select id="globalBudgetYearSelect" onchange="onBudgetYearChange(this.value)" class="bg-indigo-900 text-indigo-100 text-xs border border-indigo-700 rounded px-2 py-1 outline-none font-medium cursor-pointer w-full sm:w-auto">
+                            <option value="2570-1">ปี 2570 รอบที่ 1 (ต.ค. 69 - มี.ค. 70)</option>
+                            <option value="2570-2">ปี 2570 รอบที่ 2 (เม.ย. 70 - ก.ย. 70)</option>
+                            <option value="2571-1">ปี 2571 รอบที่ 1 (ต.ค. 70 - มี.ค. 71)</option>
+                            <option value="2571-2">ปี 2571 รอบที่ 2 (เม.ย. 71 - ก.ย. 71)</option>
+                            <option value="2572-1">ปี 2572 รอบที่ 1 (ต.ค. 71 - มี.ค. 72)</option>
+                            <option value="2572-2">ปี 2572 รอบที่ 2 (เม.ย. 72 - ก.ย. 72)</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- MAIN CONTAINER -->
+        <main class="w-full px-2 sm:px-4 md:px-6 py-4 space-y-4 md:space-y-6">
+            <section id="pageLeave" class="space-y-4 md:space-y-6">
+                
+                <!-- ปุ่มควบคุมบนมือถือ -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 block lg:hidden">
+                    <button onclick="toggleMobileAddForm()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2.5 px-4 rounded-xl shadow-sm text-sm flex justify-between items-center transition">
+                        <span>👤 เพิ่ม / นำเข้าข้อมูลเจ้าหน้าที่</span>
+                        <span id="mobileFormToggleIcon">▼</span>
+                    </button>
+                    <button onclick="toggleMobileActionForm()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2.5 px-4 rounded-xl shadow-sm text-sm flex justify-between items-center transition">
+                        <span>📝 บันทึกรายการต่าง ๆ (วันลา/ขาดแถว/พิธี/เกรด)</span>
+                        <span id="mobileActionToggleIcon">▼</span>
+                    </button>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6 w-full">
+                    
+                    <!-- Left Form Card: เพิ่มข้อมูลเจ้าหน้าที่ -->
+                    <div id="addPersonCard" class="hidden lg:block bg-white rounded-xl shadow-sm p-4 md:p-5 border border-gray-100 h-fit">
+                        <h3 class="text-sm md:text-md font-semibold text-gray-700 mb-3 flex items-center gap-2">
+                            <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"></path></svg>
+                            เพิ่มข้อมูลเจ้าหน้าที่
+                        </h3>
+                        <form id="personForm" class="space-y-3">
+                            <div class="grid grid-cols-3 gap-2">
+                                <div class="col-span-1">
+                                    <label class="block text-xs font-medium text-gray-600">คำนำหน้า</label>
+                                    <select id="prefix" class="mt-1 w-full p-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none bg-white">
+                                        <option value="นาย">นาย</option>
+                                        <option value="นาง">นาง</option>
+                                        <option value="นางสาว">นางสาว</option>
+                                        <option value="ว่าที่ ร.ต.">ว่าที่ ร.ต.</option>
+                                        <option value="ส.อ.">ส.อ.</option>
+                                    </select>
+                                </div>
+                                <div class="col-span-2">
+                                    <label class="block text-xs font-medium text-gray-600">ชื่อ - นามสกุล</label>
+                                    <input type="text" id="fullName" required placeholder="เช่น สุชาวดี เจริญธรรม" class="mt-1 w-full p-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+                                </div>
+                            </div>
+
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                <div>
+                                    <label class="block text-xs font-medium text-gray-600">วันเดือนปีเกิด</label>
+                                    <input type="date" id="birthDate" class="mt-1 w-full p-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none bg-white">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-medium text-gray-600">ประเภทบุคลากร</label>
+                                    <select id="category" class="mt-1 w-full p-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none bg-white">
+                                        <option value="ข้าราชการ">ข้าราชการ</option>
+                                        <option value="พนักงานราชการ">พนักงานราชการ</option>
+                                        <option value="ลูกจ้างประจำ">ลูกจ้างประจำ</option>
+                                        <option value="ลูกจ้างชั่วคราว">ลูกจ้างชั่วคราว</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                <div>
+                                    <label class="block text-xs font-medium text-gray-600">ตำแหน่ง</label>
+                                    <input type="text" id="position" required placeholder="เช่น เจ้าพนักงานราชทัณฑ์" class="mt-1 w-full p-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-medium text-gray-600">ระดับตำแหน่ง</label>
+                                    <input type="text" id="posLevel" placeholder="เช่น ปฏิบัติงาน" class="mt-1 w-full p-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+                                </div>
+                            </div>
+
+                            <div>
+                                <label class="block text-xs font-medium text-gray-600">สังกัด / ฝ่าย</label>
+                                <input type="text" id="affiliation" placeholder="เช่น ชุดที่ 1 / ฝ่ายปกครอง" class="mt-1 w-full p-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+                            </div>
+
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                <div>
+                                    <label class="block text-xs font-medium text-gray-600">ผู้ประเมิน</label>
+                                    <input type="text" id="evaluator" placeholder="เช่น นายเศร์ษฐา ศิริเวช" class="mt-1 w-full p-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-medium text-gray-600">ตำแหน่งผู้ประเมิน</label>
+                                    <input type="text" id="evaluatorPos" placeholder="เช่น ผู้อำนวยการ..." class="mt-1 w-full p-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+                                </div>
+                            </div>
+
+                            <button type="submit" class="w-full bg-blue-700 hover:bg-blue-800 text-white font-semibold py-2.5 rounded-lg text-sm transition shadow-sm active:scale-[0.99]">
+                                + เพิ่มเจ้าหน้าที่
+                            </button>
+                        </form>
+
+                        <div class="mt-4 pt-3 border-t border-gray-100">
+                            <label class="block text-xs font-medium text-gray-600 mb-1">นำเข้าจากไฟล์ Excel / CSV</label>
+                            <input type="file" id="excelFileInput" accept=".xlsx, .xls, .csv" class="w-full text-xs text-gray-500 file:mr-2 file:py-2 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100">
+                        </div>
+                    </div>
+
+                    <!-- Right Action Tabs Card: บันทึกรายการต่าง ๆ -->
+                    <div id="actionTabsCard" class="hidden lg:flex bg-white rounded-xl shadow-sm border border-gray-100 lg:col-span-2 flex-col overflow-hidden">
+                        <div class="flex border-b border-gray-200 bg-gray-50 text-xs font-medium overflow-x-auto custom-scroll">
+                            <button id="tabLeaveBtn" onclick="switchTab('leave')" class="tab-btn active">บันทึกวันลา / ไม่ลงนาม</button>
+                            <button id="tabLateBtn" onclick="switchTab('late')" class="tab-btn">บันทึกการขาดแถว</button>
+                            <button id="tabCeremonyRecordBtn" onclick="switchTab('ceremonyRecord')" class="tab-btn">บันทึกพิธี</button>
+                            <button id="tabGradeBtn" onclick="switchTab('grade')" class="tab-btn">บันทึกเกรด</button>
+                            <button id="tabAchievementBtn" onclick="switchTab('achievement')" class="tab-btn">บันทึกตัวชี้วัด</button>
+                            <button id="tabEfficiencyBtn" onclick="switchTab('efficiency')" class="tab-btn">บันทึกสิทธิ์วันลา</button>
+                        </div>
+
+                        <div class="p-4 md:p-5">
+                            <!-- Tab 1: Leave Content -->
+                            <div id="tabLeaveContent">
+                                <h3 class="text-sm md:text-md font-semibold text-gray-700 mb-3">ลงบันทึกรายการย่อย (รายบุคคล)</h3>
+                                <form id="leaveForm" class="space-y-4">
+                                    <div>
+                                        <label class="block text-xs font-medium text-gray-600 mb-1">เลือกเจ้าหน้าที่</label>
+                                        <div class="flex flex-col sm:flex-row gap-2">
+                                            <input type="text" id="personSearchInput" placeholder="🔍 ค้นหารายชื่อ / ตำแหน่ง..." class="w-full sm:w-1/2 p-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none bg-white">
+                                            <select id="personSelect" required class="w-full sm:w-1/2 p-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none bg-white">
+                                                <option value="">-- กรุณาเลือกเจ้าหน้าที่ --</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div id="inputSetsContainer" class="space-y-3 bg-gray-50 p-3 sm:p-4 rounded-xl border border-gray-200"></div>
+                                    <div>
+                                        <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2.5 rounded-lg text-sm transition shadow-sm active:scale-[0.99]">
+                                            บันทึกรายการย่อย
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+
+                            <!-- Tab 2: Late Content -->
+                            <div id="tabLateContent" class="hidden">
+                                <h3 class="text-sm md:text-md font-semibold text-purple-800 mb-3">บันทึกการขาดแถว</h3>
+                                <form id="lateMultiForm" class="space-y-4">
+                                    <div class="bg-purple-50 p-3 rounded-xl border border-purple-100">
+                                        <label class="block text-xs font-bold text-purple-900 mb-1">วันที่ขาดแถว (ว/ด/ป)</label>
+                                        <input type="date" id="lateDate" min="2026-10-01" max="2027-03-31" required class="w-full sm:w-1/2 p-2 border border-purple-300 rounded-lg text-sm outline-none bg-white font-medium text-gray-800">
+                                    </div>
+                                    <div>
+                                        <input type="text" id="lateSearchInput" placeholder="🔍 กรองรายชื่อ..." class="w-full p-2 border border-purple-200 rounded-lg text-sm outline-none bg-white">
+                                    </div>
+                                    <div class="space-y-2 bg-gray-50 p-3 rounded-xl border border-gray-200">
+                                        <label class="text-xs font-bold text-gray-700">เลือกเจ้าหน้าที่ที่ขาดแถว (สูงสุด 10 รายการ)</label>
+                                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2" id="latePersonsContainer"></div>
+                                    </div>
+                                    <button type="submit" class="w-full bg-purple-700 hover:bg-purple-800 text-white font-semibold py-2.5 rounded-lg text-sm transition">บันทึกการขาดแถวทั้งหมด</button>
+                                </form>
+                            </div>
+
+                            <!-- Tab 3: Ceremony Record Content -->
+                            <div id="tabCeremonyRecordContent" class="hidden">
+                                <div class="mb-3">
+                                    <h3 class="text-sm md:text-md font-semibold text-teal-800">บันทึกพิธี</h3>
+                                    <p class="text-xs text-gray-500">เลือกชุดพิธีเพื่อแสดงรายชื่อ พร้อมกำหนดสถานะ</p>
+                                </div>
+                                <form id="ceremonyRecordMultiForm" class="space-y-4">
+                                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-teal-50 p-3 rounded-xl border border-teal-100">
+                                        <div>
+                                            <label class="block text-xs font-bold text-teal-900 mb-1">วันที่ร่วมพิธี (ว/ด/ป)</label>
+                                            <input type="date" id="ceremonyRecordDate" min="2026-10-01" max="2027-03-31" required class="w-full p-2 border border-teal-300 rounded-lg text-sm outline-none bg-white font-medium">
+                                        </div>
+                                        <div>
+                                            <label class="block text-xs font-bold text-teal-900 mb-1">ชุดพิธีที่เข้าร่วม</label>
+                                            <select id="selectCeremonySet" onchange="onCeremonySetChange(this.value)" required class="w-full p-2 border border-teal-300 rounded-lg text-sm outline-none bg-white font-medium">
+                                                <option value="">-- เลือกชุดพิธี --</option>
+                                                <option value="ชุดที่ 1">ชุดที่ 1</option>
+                                                <option value="ชุดที่ 2">ชุดที่ 2</option>
+                                                <option value="ชุดที่ 3">ชุดที่ 3</option>
+                                                <option value="ชุดที่ 4">ชุดที่ 4</option>
+                                                <option value="ชุดที่ 5">ชุดที่ 5</option>
+                                                <option value="ประธาน">ประธาน</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="space-y-2.5 bg-gray-50 p-3 rounded-xl border border-gray-200">
+                                        <div class="flex justify-between items-center border-b pb-1.5">
+                                            <label class="text-xs font-bold text-gray-700">รายชื่อในชุดพิธี (สูงสุด 12 รายการ)</label>
+                                        </div>
+                                        <div class="space-y-3" id="ceremonyRowsContainer">
+                                            <div class="text-xs text-gray-400 text-center py-4">กรุณาเลือกชุดพิธีก่อนครับ</div>
+                                        </div>
+                                    </div>
+                                    <button type="submit" class="w-full bg-teal-600 hover:bg-teal-700 text-white font-semibold py-2.5 rounded-lg text-sm transition">บันทึกพิธีทั้งหมด</button>
+                                </form>
+                            </div>
+
+                            <!-- Tab 4: Grade Content -->
+                            <div id="tabGradeContent" class="hidden">
+                                <h3 class="text-sm md:text-md font-semibold text-amber-800 mb-3">บันทึกเกรดประเมิน</h3>
+                                <form id="gradeMultiForm" class="space-y-4">
+                                    <div class="bg-amber-50 p-3 rounded-xl border border-amber-100">
+                                        <label class="block text-xs font-bold text-amber-900 mb-1">ระดับเกรดที่ต้องการกำหนด</label>
+                                        <select id="selectGradeValue" required class="w-full sm:w-1/2 p-2 border border-amber-300 rounded-lg text-sm outline-none bg-white">
+                                            <option value="">-- เลือกเกรด --</option>
+                                            <option value="ดีเด่น1">ดีเด่น 1</option>
+                                            <option value="ดีเด่น2">ดีเด่น 2</option>
+                                            <option value="ดีมาก1">ดีมาก 1</option>
+                                            <option value="ดีมาก2">ดีมาก 2</option>
+                                            <option value="ดี">ดี</option>
+                                            <option value="พอใช้">พอใช้</option>
+                                            <option value="ขั้น1">ขั้น 1</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <input type="text" id="gradeSearchInput" placeholder="🔍 กรองรายชื่อ..." class="w-full p-2 border border-amber-200 rounded-lg text-sm outline-none bg-white">
+                                    </div>
+                                    <div class="space-y-2 bg-gray-50 p-3 rounded-xl border border-gray-200">
+                                        <label class="text-xs font-bold text-gray-700">เลือกเจ้าหน้าที่ (สูงสุด 10 รายการ)</label>
+                                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2" id="gradePersonsContainer"></div>
+                                    </div>
+                                    <button type="submit" class="w-full bg-amber-600 hover:bg-amber-700 text-white font-semibold py-2.5 rounded-lg text-sm transition">บันทึกเกรดทั้งหมด</button>
+                                </form>
+                            </div>
+
+                            <!-- Tab 5: Achievement Content -->
+                            <div id="tabAchievementContent" class="hidden">
+                                <h3 class="text-sm md:text-md font-semibold text-emerald-800 mb-3">บันทึกผลสัมฤทธิ์ (ตัวชี้วัด)</h3>
+                                <form id="achievementMultiForm" class="space-y-4">
+                                    <div class="bg-emerald-50 p-3 rounded-xl border border-emerald-100">
+                                        <label class="block text-xs font-bold text-emerald-900 mb-1">ค่าสัมฤทธิ์ที่ต้องการกำหนด</label>
+                                        <input type="number" step="any" id="selectAchievementValue" required placeholder="เช่น 85.50" class="w-full sm:w-1/2 p-2 border border-emerald-300 rounded-lg text-sm outline-none bg-white">
+                                    </div>
+                                    <div>
+                                        <input type="text" id="achievementSearchInput" placeholder="🔍 กรองรายชื่อ..." class="w-full p-2 border border-emerald-200 rounded-lg text-sm outline-none bg-white">
+                                    </div>
+                                    <div class="space-y-2 bg-gray-50 p-3 rounded-xl border border-gray-200">
+                                        <label class="text-xs font-bold text-gray-700">เลือกเจ้าหน้าที่ (สูงสุด 10 รายการ)</label>
+                                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2" id="achievementPersonsContainer"></div>
+                                    </div>
+                                    <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2.5 rounded-lg text-sm transition">บันทึกผลสัมฤทธิ์ทั้งหมด</button>
+                                </form>
+                            </div>
+
+                            <!-- Tab 6: Efficiency Content -->
+                            <div id="tabEfficiencyContent" class="hidden">
+                                <h3 class="text-sm md:text-md font-semibold text-cyan-800 mb-3">บันทึกสิทธิ์ (วันลา)</h3>
+                                <form id="efficiencyMultiForm" class="space-y-4">
+                                    <div class="bg-cyan-50 p-3 rounded-xl border border-cyan-100">
+                                        <label class="block text-xs font-bold text-cyan-900 mb-1">สิทธิ์วันลาที่ต้องการกำหนด</label>
+                                        <input type="number" step="any" id="selectEfficiencyValue" required placeholder="เช่น 85.50" class="w-full sm:w-1/2 p-2 border border-cyan-300 rounded-lg text-sm outline-none bg-white">
+                                    </div>
+                                    <div>
+                                        <input type="text" id="efficiencySearchInput" placeholder="🔍 กรองรายชื่อ..." class="w-full p-2 border border-cyan-200 rounded-lg text-sm outline-none bg-white">
+                                    </div>
+                                    <div class="space-y-2 bg-gray-50 p-3 rounded-xl border border-gray-200">
+                                        <label class="text-xs font-bold text-gray-700">เลือกเจ้าหน้าที่ (สูงสุด 10 รายการ)</label>
+                                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2" id="efficiencyPersonsContainer"></div>
+                                    </div>
+                                    <button type="submit" class="w-full bg-cyan-600 hover:bg-cyan-700 text-white font-semibold py-2.5 rounded-lg text-sm transition">บันทึกสิทธิ์ทั้งหมด</button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Summary Table Section -->
+                <div class="bg-white rounded-xl shadow-sm p-3 md:p-4 border border-gray-100 w-full space-y-3">
+                    <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-2 border-b pb-2">
+                        <h3 class="text-md font-bold text-gray-800">ตารางรวม</h3>
+                        <div class="flex flex-wrap gap-1.5 items-center w-full md:w-auto overflow-x-auto custom-scroll pb-1">
+                            <div class="inline-flex bg-gray-100 p-1 rounded-lg border border-gray-200 w-full sm:w-auto overflow-x-auto">
+                                <button id="sumViewAll" onclick="setSummaryView('all')" class="sum-view-btn active">📋 แสดงทั้งหมด</button>
+                                <button id="sumViewDept" onclick="setSummaryView('department')" class="sum-view-btn">🏢 ฝ่าย/สังกัด</button>
+                                <button id="sumViewEval" onclick="setSummaryView('evaluator')" class="sum-view-btn">👤 ผู้ประเมิน</button>
+                                <button id="sumViewSub" onclick="setSummaryView('subitems')" class="sum-view-btn">📑 รายการย่อย</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="flex flex-col sm:flex-row justify-between items-center gap-2">
+                        <div id="subFilterContainer" class="hidden flex items-center gap-2 w-full sm:w-auto">
+                            <label id="subFilterLabel" class="text-xs font-semibold text-gray-600 whitespace-nowrap">ตัวกรอง:</label>
+                            <select id="subFilterSelect" onchange="renderTable()" class="p-2 border border-gray-300 rounded-lg text-xs outline-none bg-white font-medium text-indigo-700 w-full sm:w-56">
+                                <option value="">-- ทั้งหมด --</option>
+                            </select>
+                        </div>
+                        <div class="flex flex-wrap sm:flex-nowrap gap-2 w-full sm:w-auto ml-auto">
+                            <input type="text" id="searchInput" placeholder="🔍 ค้นหาชื่อ/ตำแหน่ง..." class="p-1.5 border border-gray-300 rounded-lg text-xs w-full sm:w-60 outline-none focus:ring-2 focus:ring-blue-500">
+                            <div class="flex gap-2 w-full sm:w-auto">
+                                <button id="clearBtn" class="bg-gray-500 hover:bg-gray-600 text-white px-3 py-1.5 rounded-lg text-xs font-medium transition flex-1 sm:flex-none">ล้างข้อมูล</button>
+                                <button id="exportBtn" class="bg-green-600 hover:bg-green-700 text-white px-3 py-1.5 rounded-lg text-xs font-medium transition flex-1 sm:flex-none">Export CSV</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Responsive Table Wrapper (Optimized for Desktop) -->
+                    <div class="overflow-x-auto w-full border rounded-lg custom-scroll">
+                        <table class="desktop-fit-table text-left border-collapse whitespace-nowrap">
+                            <thead class="bg-gray-100 text-gray-700 uppercase text-[11px] sticky top-0">
+                                <tr>
+                                    <th class="p-1.5 border text-center" style="width: 32px;">ลำดับ</th>
+                                    <th class="p-1.5 border min-w-[110px]">ชื่อ-สกุล</th>
+                                    <th class="p-1.5 border min-w-[100px]">ตำแหน่ง</th>
+                                    <th class="p-1.5 border min-w-[65px]">ระดับ</th>
+                                    <th class="p-1.5 border text-center min-w-[65px]">ประเภท</th>
+                                    <th class="p-1.5 border text-center min-w-[75px]">สังกัด</th>
+                                    <th class="p-1.5 border min-w-[95px]">ผู้ประเมิน</th>
+                                    <th class="p-1.5 border min-w-[100px]">ตำแหน่งผู้ประเมิน</th>
+                                    <th class="p-1.5 border text-center min-w-[38px]">อายุ</th>
+                                    <th class="p-1.5 border cm-col bg-green-50">ป่วย/วัน</th>
+                                    <th class="p-1.5 border cm-col bg-green-50">ป่วย/ครั้ง</th>
+                                    <th class="p-1.5 border cm-col bg-blue-50">กิจ/วัน</th>
+                                    <th class="p-1.5 border cm-col bg-blue-50">กิจ/ครั้ง</th>
+                                    <th class="p-1.5 border cm-col bg-yellow-50">รวมวัน</th>
+                                    <th class="p-1.5 border cm-col bg-yellow-50">รวมครั้ง</th>
+                                    <th class="p-1.5 border cm-col bg-red-50">ไม่แถว</th>
+                                    <th class="p-1.5 border cm-col bg-orange-50">ไม่ลงนาม</th>
+                                    <th class="p-1.5 border cm-col bg-teal-50">ชุดพิธี</th>
+                                    <th class="p-1.5 border cm-col bg-teal-50">ร่วมพิธี</th>
+                                    <th class="p-1.5 border cm-col bg-indigo-50">เกรด</th>
+                                    <th class="p-1.5 border cm-col bg-indigo-50">สัมฤทธิ์</th>
+                                    <th class="p-1.5 border cm-col bg-indigo-50">สิทธิ์วันลา</th>
+                                    <th class="p-1.5 border cm-col text-center">รายการ</th>
+                                    <th class="p-1.5 border cm-col text-center">แก้ไข</th>
+                                    <th class="p-1.5 border cm-col text-center">ลบ</th>
+                                </tr>
+                            </thead>
+                            <tbody id="personTableBody" class="divide-y divide-gray-200"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Footer -->
+    <footer class="w-full text-center py-4 text-xs text-gray-500 border-t border-gray-200 mt-6 bg-white">
+        by tewapol wongsing
+    </footer>
+
+    <!-- Modals -->
+    <div id="editPersonFullModal" class="fixed inset-0 bg-black bg-opacity-40 hidden flex items-center justify-center p-3 z-50">
+        <div class="bg-white rounded-xl shadow-xl p-4 sm:p-6 max-w-lg w-full space-y-3 max-h-[90vh] overflow-y-auto custom-scroll">
+            <h3 class="text-md sm:text-lg font-bold text-gray-800 border-b pb-2">✏️ แก้ไขข้อมูลเจ้าหน้าที่</h3>
+            <form id="editPersonFullForm" class="space-y-3 text-xs sm:text-sm">
+                <input type="hidden" id="editFullPersonId">
+                <div class="grid grid-cols-3 gap-2">
+                    <div>
+                        <label class="block text-xs font-medium text-gray-600">คำนำหน้า</label>
+                        <select id="editFullPrefix" class="mt-1 w-full p-2 border border-gray-300 rounded-lg outline-none bg-white">
+                            <option value="นาย">นาย</option>
+                            <option value="นาง">นาง</option>
+                            <option value="นางสาว">นางสาว</option>
+                            <option value="ว่าที่ ร.ต.">ว่าที่ ร.ต.</option>
+                            <option value="ส.อ.">ส.อ.</option>
+                        </select>
+                    </div>
+                    <div class="col-span-2">
+                        <label class="block text-xs font-medium text-gray-600">ชื่อ - นามสกุล</label>
+                        <input type="text" id="editFullFullName" required class="mt-1 w-full p-2 border border-gray-300 rounded-lg outline-none">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-gray-600">วันเดือนปีเกิด</label>
+                    <input type="date" id="editFullBirthDate" class="mt-1 w-full p-2 border border-gray-300 rounded-lg outline-none bg-white">
+                </div>
+                <div class="grid grid-cols-2 gap-2">
+                    <div>
+                        <label class="block text-xs font-medium text-gray-600">ตำแหน่ง</label>
+                        <input type="text" id="editFullPosition" required class="mt-1 w-full p-2 border border-gray-300 rounded-lg outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-gray-600">ระดับตำแหน่ง</label>
+                        <input type="text" id="editFullPosLevel" class="mt-1 w-full p-2 border border-gray-300 rounded-lg outline-none">
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-2">
+                    <div>
+                        <label class="block text-xs font-medium text-gray-600">ประเภทบุคลากร</label>
+                        <select id="editFullCategory" class="mt-1 w-full p-2 border border-gray-300 rounded-lg outline-none bg-white">
+                            <option value="ข้าราชการ">ข้าราชการ</option>
+                            <option value="พนักงานราชการ">พนักงานราชการ</option>
+                            <option value="ลูกจ้างประจำ">ลูกจ้างประจำ</option>
+                            <option value="ลูกจ้างชั่วคราว">ลูกจ้างชั่วคราว</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-gray-600">ชุดพิธี</label>
+                        <select id="editFullCeremonialDress" class="mt-1 w-full p-2 border border-gray-300 rounded-lg outline-none bg-white">
+                            <option value="ชุดที่ 1">ชุดที่ 1</option>
+                            <option value="ชุดที่ 2">ชุดที่ 2</option>
+                            <option value="ชุดที่ 3">ชุดที่ 3</option>
+                            <option value="ชุดที่ 4">ชุดที่ 4</option>
+                            <option value="ชุดที่ 5">ชุดที่ 5</option>
+                            <option value="ประธาน">ประธาน</option>
+                        </select>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-gray-600">สังกัด</label>
+                    <input type="text" id="editFullAffiliation" class="mt-1 w-full p-2 border border-gray-300 rounded-lg outline-none">
+                </div>
+                <div class="grid grid-cols-2 gap-2">
+                    <div>
+                        <label class="block text-xs font-medium text-gray-600">ผู้ประเมิน</label>
+                        <input type="text" id="editFullEvaluator" class="mt-1 w-full p-2 border border-gray-300 rounded-lg outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-gray-600">ตำแหน่งผู้ประเมิน</label>
+                        <input type="text" id="editFullEvaluatorPos" class="mt-1 w-full p-2 border border-gray-300 rounded-lg outline-none">
+                    </div>
+                </div>
+                <div class="grid grid-cols-3 gap-2 border-t pt-2">
+                    <div>
+                        <label class="block text-xs font-medium text-gray-600">เกรด</label>
+                        <input type="text" id="editFullGrade" class="mt-1 w-full p-2 border border-gray-300 rounded-lg outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-gray-600">สัมฤทธิ์</label>
+                        <input type="number" step="any" id="editFullAchievement" class="mt-1 w-full p-2 border border-gray-300 rounded-lg outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-gray-600">สิทธิ์วันลา</label>
+                        <input type="number" step="any" id="editFullEfficiency" class="mt-1 w-full p-2 border border-gray-300 rounded-lg outline-none">
+                    </div>
+                </div>
+                <div class="flex justify-end gap-2 pt-3 border-t">
+                    <button type="button" onclick="closeEditPersonFullModal()" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg font-semibold">ยกเลิก</button>
+                    <button type="submit" class="px-4 py-2 bg-indigo-600 text-white rounded-lg font-semibold">บันทึกแก้ไข</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="detailModal" class="fixed inset-0 bg-black bg-opacity-40 hidden flex items-center justify-center p-3 z-50">
+        <div class="bg-white rounded-xl shadow-xl p-4 sm:p-6 max-w-lg w-full space-y-3">
+            <h3 class="text-md sm:text-lg font-bold text-gray-800 border-b pb-2 flex justify-between items-center">
+                <span>📋 รายการย่อย</span>
+                <span id="detailPersonName" class="text-xs font-semibold text-indigo-600"></span>
+            </h3>
+            <div class="max-h-60 overflow-y-auto border rounded-lg p-1 bg-gray-50 custom-scroll">
+                <table class="w-full text-xs text-left">
+                    <thead class="bg-gray-200 text-gray-700 sticky top-0">
+                        <tr>
+                            <th class="p-2 border">ประเภท</th>
+                            <th class="p-2 border">ช่วงวันที่</th>
+                            <th class="p-2 border text-center">วัน</th>
+                            <th class="p-2 border">หมายเหตุ</th>
+                            <th class="p-2 border text-center">ลบ</th>
+                        </tr>
+                    </thead>
+                    <tbody id="detailTableBody"></tbody>
+                </table>
+            </div>
+            <div class="flex justify-end pt-1">
+                <button type="button" onclick="closeDetailModal()" class="px-4 py-2 bg-gray-600 text-white rounded-lg text-xs sm:text-sm">ปิด</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz6g3TUlObF-J5Mz8oYYXwWTHI-Phdr6BSE9RJIvfzw9k16lVgEUDi2gSsBbFKzwpU/exec";
+
+        let people = [];
+        const TOTAL_INPUT_SETS = 10;
+        let currentSummaryView = 'all';
+
+        const budgetPeriods = {
+            "2570-1": { label: "ประจำปี 2570 รอบที่ 1/70 (1 ต.ค. 69 - 30 มี.ค. 70)", min: "2026-10-01", max: "2027-03-31" },
+            "2570-2": { label: "ประจำปี 2570 รอบที่ 2/70 (1 เม.ย. 70 - 30 ก.ย. 70)", min: "2027-04-01", max: "2027-09-30" },
+            "2571-1": { label: "ประจำปี 2571 รอบที่ 1/71 (1 ต.ค. 70 - 30 มี.ค. 71)", min: "2027-10-01", max: "2028-03-31" },
+            "2571-2": { label: "ประจำปี 2571 รอบที่ 2/71 (1 เม.ย. 71 - 30 ก.ย. 71)", min: "2028-04-01", max: "2028-09-30" },
+            "2572-1": { label: "ประจำปี 2572 รอบที่ 1/72 (1 ต.ค. 71 - 30 มี.ค. 72)", min: "2028-10-01", max: "2029-03-31" },
+            "2572-2": { label: "ประจำปี 2572 รอบที่ 2/72 (1 เม.ย. 72 - 30 ก.ย. 72)", min: "2029-04-01", max: "2029-09-30" }
+        };
+
+        let currentActivePeriod = budgetPeriods["2570-1"];
+
+        async function loadDataFromCloud() {
+            try {
+                const res = await fetch(GOOGLE_SCRIPT_URL);
+                const data = await res.json();
+                if (Array.isArray(data)) {
+                    people = data;
+                    localStorage.setItem('personnelData', JSON.stringify(people));
+                    renderTable();
+                    renderSelect('');
+                    updateMultiSelectOptions('late', '');
+                    updateMultiSelectOptions('grade', '');
+                    updateMultiSelectOptions('achievement', '');
+                    updateMultiSelectOptions('efficiency', '');
+                }
+            } catch (err) {
+                console.error("ไม่สามารถดึงข้อมูลจาก Cloud ได้ กำลังใช้ข้อมูลในเครื่องแทน:", err);
+                people = JSON.parse(localStorage.getItem('personnelData')) || [];
+                renderTable();
+            }
+        }
+
+        async function saveData() {
+            localStorage.setItem('personnelData', JSON.stringify(people));
+            renderTable();
+            renderSelect(document.getElementById('personSearchInput')?.value || '');
+            updateMultiSelectOptions('late', '');
+            updateMultiSelectOptions('grade', '');
+            updateMultiSelectOptions('achievement', '');
+            updateMultiSelectOptions('efficiency', '');
+
+            try {
+                await fetch(GOOGLE_SCRIPT_URL, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ people: people })
+                });
+            } catch (err) {
+                console.error("เกิดข้อผิดพลาดในการส่งข้อมูลไป Cloud:", err);
+            }
+        }
+
+        loadDataFromCloud();
+
+        function toggleMobileAddForm() {
+            const card = document.getElementById('addPersonCard');
+            const icon = document.getElementById('mobileFormToggleIcon');
+            if (card.classList.contains('hidden')) {
+                card.classList.remove('hidden');
+                icon.textContent = '▲';
+            } else {
+                card.classList.add('hidden');
+                icon.textContent = '▼';
+            }
+        }
+
+        function toggleMobileActionForm() {
+            const card = document.getElementById('actionTabsCard');
+            const icon = document.getElementById('mobileActionToggleIcon');
+            if (card.classList.contains('hidden')) {
+                card.classList.remove('hidden');
+                card.classList.add('flex');
+                icon.textContent = '▲';
+            } else {
+                card.classList.add('hidden');
+                card.classList.remove('flex');
+                icon.textContent = '▼';
+            }
+        }
+
+        function calculateAge(birthDateString) {
+            if (!birthDateString) return '-';
+            const today = new Date();
+            const birthDate = new Date(birthDateString);
+            let age = today.getFullYear() - birthDate.getFullYear();
+            const m = today.getMonth() - birthDate.getMonth();
+            if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+                age--;
+            }
+            return age >= 0 ? age : '-';
+        }
+
+        function onBudgetYearChange(key) {
+            if (budgetPeriods[key]) {
+                currentActivePeriod = budgetPeriods[key];
+                document.getElementById('headerPeriodLabel').textContent = currentActivePeriod.label;
+                buildInputSets();
+                document.getElementById('lateDate').min = currentActivePeriod.min;
+                document.getElementById('lateDate').max = currentActivePeriod.max;
+                document.getElementById('ceremonyRecordDate').min = currentActivePeriod.min;
+                document.getElementById('ceremonyRecordDate').max = currentActivePeriod.max;
+            }
+        }
+
+        function initDynamicSelectsContainers() {
+            const containers = [
+                { id: 'latePersonsContainer', prefix: 'latePerson' },
+                { id: 'gradePersonsContainer', prefix: 'gradePerson' },
+                { id: 'achievementPersonsContainer', prefix: 'achievementPerson' },
+                { id: 'efficiencyPersonsContainer', prefix: 'efficiencyPerson' }
+            ];
+            containers.forEach(c => {
+                const el = document.getElementById(c.id);
+                if (el) {
+                    let html = '';
+                    for (let i = 1; i <= 10; i++) {
+                        html += `
+                            <div>
+                                <label class="block text-[11px] text-gray-500 mb-0.5 font-medium">ลำดับที่ ${i}</label>
+                                <select id="${c.prefix}${i}" class="w-full p-2 border border-gray-300 rounded-lg text-xs sm:text-sm outline-none bg-white"><option value="">-- เลือกเจ้าหน้าที่ --</option></select>
+                            </div>
+                        `;
+                    }
+                    el.innerHTML = html;
+                }
+            });
+        }
+        initDynamicSelectsContainers();
+
+        function setSummaryView(viewMode) {
+            currentSummaryView = viewMode;
+            document.getElementById('sumViewAll').classList.toggle('active', viewMode === 'all');
+            document.getElementById('sumViewDept').classList.toggle('active', viewMode === 'department');
+            document.getElementById('sumViewEval').classList.toggle('active', viewMode === 'evaluator');
+            document.getElementById('sumViewSub').classList.toggle('active', viewMode === 'subitems');
+
+            const filterContainer = document.getElementById('subFilterContainer');
+            const filterLabel = document.getElementById('subFilterLabel');
+            const filterSelect = document.getElementById('subFilterSelect');
+
+            if (viewMode === 'all') {
+                filterContainer.classList.add('hidden');
+            } else if (viewMode === 'department') {
+                filterContainer.classList.remove('hidden');
+                filterLabel.innerText = 'ฝ่าย/สังกัด:';
+                populateSubFilterOptions('affiliation');
+            } else if (viewMode === 'evaluator') {
+                filterContainer.classList.remove('hidden');
+                filterLabel.innerText = 'ผู้ประเมิน:';
+                populateSubFilterOptions('evaluator');
+            } else if (viewMode === 'subitems') {
+                filterContainer.classList.remove('hidden');
+                filterLabel.innerText = 'ประเภทรายการ:';
+                filterSelect.innerHTML = `
+                    <option value="">-- ทั้งหมด (ทุกรายการย่อย) --</option>
+                    <option value="ลาป่วย">ลาป่วย</option>
+                    <option value="ลากิจ">ลากิจ</option>
+                    <option value="ไม่เข้าแถว">ไม่เข้าแถว</option>
+                    <option value="ไม่ลงนาม">ไม่ลงนาม</option>
+                    <option value="ร่วมพิธี">ร่วมพิธี</option>
+                `;
+            }
+            renderTable();
+        }
+
+        function populateSubFilterOptions(fieldKey) {
+            const filterSelect = document.getElementById('subFilterSelect');
+            const uniqueValues = [...new Set(people.map(p => p[fieldKey] || 'ไม่ระบุ').filter(Boolean))].sort();
+            let html = '<option value="">-- ทั้งหมด --</option>';
+            uniqueValues.forEach(val => { html += `<option value="${val}">${val}</option>`; });
+            filterSelect.innerHTML = html;
+        }
+
+        function switchTab(tabName) {
+            document.getElementById('tabLeaveBtn').classList.toggle('active', tabName === 'leave');
+            document.getElementById('tabLateBtn').classList.toggle('active', tabName === 'late');
+            document.getElementById('tabCeremonyRecordBtn').classList.toggle('active', tabName === 'ceremonyRecord');
+            document.getElementById('tabGradeBtn').classList.toggle('active', tabName === 'grade');
+            document.getElementById('tabAchievementBtn').classList.toggle('active', tabName === 'achievement');
+            document.getElementById('tabEfficiencyBtn').classList.toggle('active', tabName === 'efficiency');
+
+            document.getElementById('tabLeaveContent').classList.toggle('hidden', tabName !== 'leave');
+            document.getElementById('tabLateContent').classList.toggle('hidden', tabName !== 'late');
+            document.getElementById('tabCeremonyRecordContent').classList.toggle('hidden', tabName !== 'ceremonyRecord');
+            document.getElementById('tabGradeContent').classList.toggle('hidden', tabName !== 'grade');
+            document.getElementById('tabAchievementContent').classList.toggle('hidden', tabName !== 'achievement');
+            document.getElementById('tabEfficiencyContent').classList.toggle('hidden', tabName !== 'efficiency');
+        }
+
+        function updateMultiSelectOptions(prefix, filterText = '') {
+            const text = filterText.trim().toLowerCase();
+            const filtered = people.filter(p => {
+                const fullNameWithPrefix = ((p.prefix ? p.prefix + ' ' : '') + p.fullName).toLowerCase();
+                const position = (p.position || '').toLowerCase();
+                return fullNameWithPrefix.includes(text) || position.includes(text);
+            });
+
+            for (let i = 1; i <= 10; i++) {
+                const select = document.getElementById(`${prefix}Person${i}`);
+                if (!select) continue;
+                const currentVal = select.value;
+                select.innerHTML = '<option value="">-- เลือกเจ้าหน้าที่ --</option>';
+                let itemsToShow = [...filtered];
+                if (currentVal && !itemsToShow.some(p => String(p.id) === String(currentVal))) {
+                    const selectedPerson = people.find(p => String(p.id) === String(currentVal));
+                    if (selectedPerson) itemsToShow.push(selectedPerson);
+                }
+                itemsToShow.forEach(p => {
+                    const opt = document.createElement('option');
+                    opt.value = String(p.id);
+                    opt.textContent = `${p.prefix ? p.prefix + ' ' : ''}${p.fullName} (${p.position})`;
+                    select.appendChild(opt);
+                });
+                if (currentVal) select.value = String(currentVal);
+            }
+        }
+
+        document.getElementById('personSearchInput').addEventListener('input', e => renderSelect(e.target.value));
+        document.getElementById('lateSearchInput').addEventListener('input', e => updateMultiSelectOptions('late', e.target.value));
+        document.getElementById('gradeSearchInput').addEventListener('input', e => updateMultiSelectOptions('grade', e.target.value));
+        document.getElementById('achievementSearchInput').addEventListener('input', e => updateMultiSelectOptions('achievement', e.target.value));
+        document.getElementById('efficiencySearchInput').addEventListener('input', e => updateMultiSelectOptions('efficiency', e.target.value));
+
+        function generateUniqueId() { return 'id_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9); }
+
+        function buildInputSets() {
+            const container = document.getElementById('inputSetsContainer');
+            if(!container) return;
+            container.innerHTML = `<label id="dateRangeNotice" class="block text-xs font-bold text-gray-700 border-b pb-1">ช่วงวันที่บันทึก (สูงสุด 10 ช่วง)</label>`;
+            for (let i = 1; i <= TOTAL_INPUT_SETS; i++) {
+                const div = document.createElement('div');
+                div.className = "grid grid-cols-1 sm:grid-cols-12 gap-2 items-center bg-white p-2.5 rounded-lg border border-gray-100 shadow-2xs";
+                div.innerHTML = `
+                    <div class="sm:col-span-3">
+                        <select id="leaveType${i}" class="w-full p-2 border border-gray-300 rounded-lg text-xs sm:text-sm bg-white">
+                            <option value="ลาป่วย">ลาป่วย</option>
+                            <option value="ลากิจ">ลากิจ</option>
+                            <option value="ไม่ลงนาม">ไม่ลงนาม</option>
+                            <option value="มาสาย">มาสาย</option>
+                        </select>
+                    </div>
+                    <div class="sm:col-span-3">
+                        <input type="date" id="startDate${i}" min="${currentActivePeriod.min}" max="${currentActivePeriod.max}" class="w-full p-2 border border-gray-300 rounded-lg text-xs sm:text-sm bg-white">
+                    </div>
+                    <div class="sm:col-span-3">
+                        <input type="date" id="endDate${i}" min="${currentActivePeriod.min}" max="${currentActivePeriod.max}" class="w-full p-2 border border-gray-300 rounded-lg text-xs sm:text-sm bg-white">
+                    </div>
+                    <div class="sm:col-span-1">
+                        <input type="number" id="days${i}" min="0" step="0.5" value="0" placeholder="วัน" class="w-full p-2 border border-gray-300 rounded-lg text-xs sm:text-sm text-center font-bold text-indigo-700 bg-white">
+                    </div>
+                    <div class="sm:col-span-2">
+                        <input type="text" id="remark${i}" placeholder="หมายเหตุ..." class="w-full p-2 border border-gray-300 rounded-lg text-xs sm:text-sm bg-white">
+                    </div>
+                `;
+                container.appendChild(div);
+            }
+        }
+        buildInputSets();
+
+        function onCeremonySetChange(selectedSet) {
+            const container = document.getElementById('ceremonyRowsContainer');
+            if (!container) return;
+            if (!selectedSet) {
+                container.innerHTML = '<div class="text-xs text-gray-400 text-center py-4">กรุณาเลือกชุดพิธีก่อนครับ</div>';
+                return;
+            }
+            let matchedPeople = people.filter(p => (p.ceremonialDress && p.ceremonialDress.trim() === selectedSet) || (p.affiliation && p.affiliation.trim() === selectedSet));
+            container.innerHTML = '';
+            for (let i = 1; i <= 12; i++) {
+                let defaultPersonId = matchedPeople[i - 1] ? String(matchedPeople[i - 1].id) : "";
+                let optionsHtml = '<option value="">-- เลือกเจ้าหน้าที่ --</option>';
+                people.forEach(p => {
+                    let sel = (String(p.id) === defaultPersonId) ? 'selected' : '';
+                    optionsHtml += `<option value="${p.id}" ${sel}>${p.prefix ? p.prefix + ' ' : ''}${p.fullName} (${p.position})</option>`;
+                });
+                let rowDiv = document.createElement('div');
+                rowDiv.className = "bg-white p-2.5 rounded-lg border border-gray-200 grid grid-cols-1 sm:grid-cols-12 gap-2 items-center";
+                rowDiv.innerHTML = `
+                    <div class="sm:col-span-1 text-xs font-bold text-gray-500 text-center">#${i}</div>
+                    <div class="sm:col-span-5">
+                        <select id="ceremonyPerson${i}" class="w-full p-2 border border-gray-300 rounded-lg text-xs sm:text-sm bg-white">${optionsHtml}</select>
+                    </div>
+                    <div class="sm:col-span-3 flex justify-center">
+                        <div class="status-group">
+                            <button type="button" onclick="setCeremonyRowStatus(${i}, 'present', this)" id="cBtn_${i}_present" class="btn-status">เข้าร่วม</button>
+                            <button type="button" onclick="setCeremonyRowStatus(${i}, 'absent', this)" id="cBtn_${i}_absent" class="btn-status">ขาด</button>
+                            <button type="button" onclick="setCeremonyRowStatus(${i}, 'duty', this)" id="cBtn_${i}_duty" class="btn-status">เวร</button>
+                            <button type="button" onclick="setCeremonyRowStatus(${i}, 'sub', this)" id="cBtn_${i}_sub" class="btn-status">เวรแทน</button>
+                        </div>
+                        <input type="hidden" id="ceremonyStatus${i}" value="">
+                    </div>
+                    <div class="sm:col-span-3">
+                        <input type="text" id="ceremonyRemark${i}" placeholder="หมายเหตุ..." class="input-remark">
+                    </div>
+                `;
+                container.appendChild(rowDiv);
+            }
+        }
+
+        function setCeremonyRowStatus(index, status, btnElem) {
+            document.getElementById(`ceremonyStatus${index}`).value = status;
+            let groupDiv = btnElem.parentElement;
+            let buttons = groupDiv.getElementsByTagName('button');
+            for (let b of buttons) { b.className = "btn-status"; }
+            if (status === 'present') btnElem.className = "btn-status st-present";
+            else if (status === 'absent') btnElem.className = "btn-status st-absent";
+            else if (status === 'duty') btnElem.className = "btn-status st-duty";
+            else if (status === 'sub') btnElem.className = "btn-status st-sub";
+        }
+
+        function renderSelect(filterText = '') {
+            const select = document.getElementById('personSelect');
+            if(!select) return;
+            const currentVal = select.value;
+            select.innerHTML = '<option value="">-- กรุณาเลือกเจ้าหน้าที่ --</option>';
+            const text = filterText.trim().toLowerCase();
+            const filtered = people.filter(p => ((p.prefix ? p.prefix + ' ' : '') + p.fullName).toLowerCase().includes(text) || (p.position || '').toLowerCase().includes(text));
+            filtered.forEach(p => {
+                const opt = document.createElement('option');
+                opt.value = String(p.id);
+                opt.textContent = `${p.prefix ? p.prefix + ' ' : ''}${p.fullName} (${p.position})`;
+                select.appendChild(opt);
+            });
+            if (currentVal) select.value = String(currentVal);
+        }
+
+        function renderTable() {
+            const tbody = document.getElementById('personTableBody');
+            if(!tbody) return;
+            const search = document.getElementById('searchInput').value.toLowerCase();
+            const subFilterVal = document.getElementById('subFilterSelect').value;
+            tbody.innerHTML = '';
+
+            if (people.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="25" class="text-center py-6 text-gray-400">ยังไม่มีข้อมูลเจ้าหน้าที่</td></tr>`;
+                return;
+            }
+
+            let displayList = people.filter(p => {
+                const matchesSearch = p.fullName.toLowerCase().includes(search) || (p.position && p.position.toLowerCase().includes(search));
+                if (!matchesSearch) return false;
+                if (currentSummaryView === 'department' && subFilterVal) return (p.affiliation || 'ไม่ระบุ') === subFilterVal;
+                if (currentSummaryView === 'evaluator' && subFilterVal) return (p.evaluator || 'ไม่ระบุ') === subFilterVal;
+                return true;
+            });
+
+            if (currentSummaryView === 'subitems') {
+                let subItemRows = [];
+                displayList.forEach(p => {
+                    (p.records || []).forEach(r => {
+                        if (!subFilterVal || r.type === subFilterVal) subItemRows.push({ person: p, record: r });
+                    });
+                });
+                if (subItemRows.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="25" class="text-center py-6 text-gray-400">ไม่พบข้อมูลรายการย่อย</td></tr>`;
+                    return;
+                }
+                subItemRows.forEach((item, index) => {
+                    const p = item.person, r = item.record;
+                    const computedAge = calculateAge(p.birthDate);
+                    tbody.innerHTML += `
+                        <tr class="hover:bg-gray-50 text-gray-800">
+                            <td class="p-1 border text-center" style="width: 32px;">${index + 1}</td>
+                            <td class="p-1 border font-medium">${p.prefix ? p.prefix + ' ' : ''}${p.fullName}</td>
+                            <td class="p-1 border">${p.position}</td>
+                            <td class="p-1 border">${p.posLevel || '-'}</td>
+                            <td class="p-1 border text-center">${p.category || '-'}</td>
+                            <td class="p-1 border text-center">${p.affiliation || '-'}</td>
+                            <td class="p-1 border">${p.evaluator || '-'}</td>
+                            <td class="p-1 border">${p.evaluatorPos || '-'}</td>
+                            <td class="p-1 border text-center">${computedAge}</td>
+                            <td colspan="8" class="p-1 border bg-amber-50/30 text-xs">
+                                <span class="font-bold text-indigo-700">[${r.type}]</span> ช่วงวันที่: ${r.startDate} ถึง ${r.endDate} ${r.remark ? '- ' + r.remark : ''}
+                            </td>
+                            <td class="p-1 border cm-col bg-teal-50">-</td>
+                            <td class="p-1 border cm-col bg-teal-50">-</td>
+                            <td class="p-1 border cm-col bg-indigo-50">${p.grade || '-'}</td>
+                            <td class="p-1 border cm-col bg-indigo-50">${p.achievement || '-'}</td>
+                            <td class="p-1 border cm-col bg-indigo-50">${p.efficiency || '-'}</td>
+                            <td class="p-1 border cm-col text-center"><button onclick="openDetailModal('${p.id}')" class="text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded text-[11px]">ดู</button></td>
+                            <td class="p-1 border cm-col text-center"><button onclick="openEditPersonFullModal('${p.id}')" class="text-indigo-600 bg-indigo-50 px-1.5 py-0.5 rounded text-[11px]">แก้ไข</button></td>
+                            <td class="p-1 border cm-col text-center"><button onclick="deletePerson('${p.id}')" class="text-red-500 text-[11px] underline">ลบ</button></td>
+                        </tr>`;
+                });
+                return;
+            }
+
+            displayList.forEach((p, index) => {
+                let businessDays = 0, businessCount = 0, sickDays = 0, sickCount = 0, noAssembly = 0, unsignedDays = 0, unsignedCount = 0;
+                let ceremonySetsCount = {}, ceremonyTotalDays = 0;
+                (p.records || []).forEach(r => {
+                    let isChronic = r.type === 'ลาป่วย' && r.remark && r.remark.includes('ป่วยเรื้อรัง');
+                    if (r.type === 'ลากิจ') { businessDays += parseFloat(r.days || 1); businessCount++; }
+                    if (r.type === 'ลาป่วย' && !isChronic) { sickDays += parseFloat(r.days || 1); sickCount++; }
+                    if (r.type === 'ไม่เข้าแถว') { noAssembly++; }
+                    if (r.type === 'ไม่ลงนาม') { unsignedDays += parseFloat(r.days || 1); unsignedCount++; }
+                    if (r.type === 'ร่วมพิธี') {
+                        if (r.remark && (r.remark.includes('(เข้าร่วม)') || r.remark.includes('(เวร)'))) {
+                            ceremonyTotalDays++;
+                        }
+                        let setKey = r.remark ? r.remark.split(' ')[0] : 'ไม่ระบุชุด';
+                        if (r.remark && (r.remark.includes('(เข้าร่วม)') || r.remark.includes('(เวร)'))) {
+                            ceremonySetsCount[setKey] = (ceremonySetsCount[setKey] || 0) + 1;
+                        }
+                    }
+                });
+
+                let displaySickDays = sickDays + unsignedDays;
+                let displaySickCount = sickCount + unsignedCount;
+                let ceremonySetSummary = Object.keys(ceremonySetsCount).join(', ');
+                let displayCeremonyDress = p.ceremonialDress || ceremonySetSummary || '-';
+                let computedAge = calculateAge(p.birthDate);
+
+                tbody.innerHTML += `
+                    <tr class="hover:bg-gray-50 text-gray-800">
+                        <td class="p-1 border text-center" style="width: 32px;">${index + 1}</td>
+                        <td class="p-1 border font-medium max-w-[130px] truncate" title="${p.prefix ? p.prefix + ' ' : ''}${p.fullName}">${p.prefix ? p.prefix + ' ' : ''}${p.fullName}</td>
+                        <td class="p-1 border max-w-[110px] truncate" title="${p.position}">${p.position}</td>
+                        <td class="p-1 border">${p.posLevel || '-'}</td>
+                        <td class="p-1 border text-center">${p.category || '-'}</td>
+                        <td class="p-1 border text-center max-w-[85px] truncate" title="${p.affiliation || '-'}">${p.affiliation || '-'}</td>
+                        <td class="p-1 border max-w-[100px] truncate" title="${p.evaluator || '-'}">${p.evaluator || '-'}</td>
+                        <td class="p-1 border max-w-[110px] truncate" title="${p.evaluatorPos || '-'}">${p.evaluatorPos || '-'}</td>
+                        <td class="p-1 border text-center">${computedAge}</td>
+                        <td class="p-1 border cm-col bg-green-50/50">${displaySickDays}</td>
+                        <td class="p-1 border cm-col bg-green-50/50">${displaySickCount}</td>
+                        <td class="p-1 border cm-col bg-blue-50/50">${businessDays}</td>
+                        <td class="p-1 border cm-col bg-blue-50/50">${businessCount}</td>
+                        <td class="p-1 border cm-col font-bold bg-yellow-50/50">${businessDays + displaySickDays}</td>
+                        <td class="p-1 border cm-col font-bold bg-yellow-50/50">${businessCount + displaySickCount}</td>
+                        <td class="p-1 border cm-col bg-red-50/50">${noAssembly}</td>
+                        <td class="p-1 border cm-col bg-orange-50/50">${unsignedDays}</td>
+                        <td class="p-1 border cm-col bg-teal-50/50 font-semibold text-teal-800">${displayCeremonyDress}</td>
+                        <td class="p-1 border cm-col bg-teal-50/50 font-bold text-teal-900">${ceremonyTotalDays}</td>
+                        <td class="p-1 border cm-col font-bold bg-indigo-50/40">${p.grade || '-'}</td>
+                        <td class="p-1 border cm-col font-bold bg-indigo-50/40">${p.achievement || '-'}</td>
+                        <td class="p-1 border cm-col font-bold bg-indigo-50/40">${p.efficiency || '-'}</td>
+                        <td class="p-1 border cm-col text-center"><button onclick="openDetailModal('${p.id}')" class="text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded text-[11px]">ดู</button></td>
+                        <td class="p-1 border cm-col text-center"><button onclick="openEditPersonFullModal('${p.id}')" class="text-indigo-600 bg-indigo-50 px-1.5 py-0.5 rounded text-[11px]">แก้ไข</button></td>
+                        <td class="p-1 border cm-col text-center"><button onclick="deletePerson('${p.id}')" class="text-red-500 text-[11px] underline">ลบ</button></td>
+                    </tr>`;
+            });
+        }
+
+        function openEditPersonFullModal(personId) {
+            let p = people.find(item => String(item.id) === String(personId));
+            if (!p) return;
+            document.getElementById('editFullPersonId').value = String(p.id);
+            document.getElementById('editFullPrefix').value = p.prefix || 'นาย';
+            document.getElementById('editFullFullName').value = p.fullName || '';
+            document.getElementById('editFullBirthDate').value = p.birthDate || '';
+            document.getElementById('editFullPosition').value = p.position || '';
+            document.getElementById('editFullPosLevel').value = p.posLevel || '';
+            document.getElementById('editFullCategory').value = p.category || 'ข้าราชการ';
+            document.getElementById('editFullAffiliation').value = p.affiliation || '';
+            document.getElementById('editFullEvaluator').value = p.evaluator || '';
+            document.getElementById('editFullEvaluatorPos').value = p.evaluatorPos || '';
+            document.getElementById('editFullGrade').value = p.grade || '';
+            document.getElementById('editFullAchievement').value = p.achievement || '';
+            document.getElementById('editFullEfficiency').value = p.efficiency || '';
+            document.getElementById('editFullCeremonialDress').value = p.ceremonialDress || 'ชุดที่ 1';
+            document.getElementById('editPersonFullModal').classList.remove('hidden');
+        }
+
+        function closeEditPersonFullModal() { document.getElementById('editPersonFullModal').classList.add('hidden'); }
+
+        document.getElementById('editPersonFullForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            let p = people.find(item => String(item.id) === String(document.getElementById('editFullPersonId').value));
+            if (p) {
+                p.prefix = document.getElementById('editFullPrefix').value;
+                p.fullName = document.getElementById('editFullFullName').value.trim();
+                p.birthDate = document.getElementById('editFullBirthDate').value;
+                p.position = document.getElementById('editFullPosition').value.trim();
+                p.posLevel = document.getElementById('editFullPosLevel').value.trim();
+                p.category = document.getElementById('editFullCategory').value;
+                p.affiliation = document.getElementById('editFullAffiliation').value.trim();
+                p.evaluator = document.getElementById('editFullEvaluator').value.trim();
+                p.evaluatorPos = document.getElementById('editFullEvaluatorPos').value.trim();
+                p.grade = document.getElementById('editFullGrade').value.trim();
+                p.achievement = document.getElementById('editFullAchievement').value.trim();
+                p.efficiency = document.getElementById('editFullEfficiency').value.trim();
+                p.ceremonialDress = document.getElementById('editFullCeremonialDress').value;
+                saveData();
+                closeEditPersonFullModal();
+            }
+        });
+
+        function openDetailModal(personId) {
+            let person = people.find(p => String(p.id) === String(personId));
+            if (!person) return;
+            document.getElementById('detailPersonName').textContent = `${person.prefix ? person.prefix + ' ' : ''}${person.fullName}`;
+            const tbody = document.getElementById('detailTableBody');
+            tbody.innerHTML = '';
+            (person.records || []).forEach((r, idx) => {
+                tbody.innerHTML += `
+                    <tr>
+                        <td class="p-2 border font-medium">${r.type}</td>
+                        <td class="p-2 border">${r.startDate} ถึง ${r.endDate}</td>
+                        <td class="p-2 border text-center font-bold">${r.days || 1}</td>
+                        <td class="p-2 border text-gray-600">${r.remark || '-'}</td>
+                        <td class="p-2 border text-center"><button onclick="deleteRecord('${person.id}', ${idx})" class="text-red-600 text-xs underline">ลบ</button></td>
+                    </tr>`;
+            });
+            document.getElementById('detailModal').classList.remove('hidden');
+        }
+
+        function closeDetailModal() { document.getElementById('detailModal').classList.add('hidden'); }
+
+        function deleteRecord(personId, recordIndex) {
+            let person = people.find(p => String(p.id) === String(personId));
+            if (person && person.records) {
+                person.records.splice(recordIndex, 1);
+                saveData();
+                openDetailModal(personId);
+            }
+        }
+
+        document.getElementById('personForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            people.push({
+                id: generateUniqueId(),
+                prefix: document.getElementById('prefix').value,
+                fullName: document.getElementById('fullName').value.trim(),
+                birthDate: document.getElementById('birthDate').value,
+                position: document.getElementById('position').value.trim(),
+                posLevel: document.getElementById('posLevel').value.trim(),
+                category: document.getElementById('category').value,
+                affiliation: document.getElementById('affiliation').value.trim(),
+                evaluator: document.getElementById('evaluator').value.trim(),
+                evaluatorPos: document.getElementById('evaluatorPos').value.trim(),
+                ceremonialDress: 'ชุดที่ 1',
+                grade: '', achievement: '', efficiency: '', records: []
+            });
+            saveData();
+            e.target.reset();
+            if (window.innerWidth < 1024) toggleMobileAddForm();
+        });
+
+        document.getElementById('leaveForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const personId = document.getElementById('personSelect').value;
+            if (!personId) return alert('กรุณาเลือกเจ้าหน้าที่ก่อนครับ');
+
+            let person = people.find(p => String(p.id) === String(personId));
+            if (!person) return alert('ไม่พบข้อมูลเจ้าหน้าที่ในระบบครับ');
+            if (!person.records) person.records = [];
+
+            let addedRecordsCount = 0;
+
+            for (let i = 1; i <= TOTAL_INPUT_SETS; i++) {
+                const leaveTypeElem = document.getElementById(`leaveType${i}`);
+                const startDateElem = document.getElementById(`startDate${i}`);
+                const endDateElem = document.getElementById(`endDate${i}`);
+                const daysElem = document.getElementById(`days${i}`);
+                const remarkElem = document.getElementById(`remark${i}`);
+
+                if (startDateElem && startDateElem.value) {
+                    const lType = leaveTypeElem ? leaveTypeElem.value : 'ลาป่วย';
+                    const sDate = startDateElem.value;
+                    const eDate = endDateElem && endDateElem.value ? endDateElem.value : sDate;
+                    const dVal = daysElem && daysElem.value !== '' ? parseFloat(daysElem.value) : 1;
+                    const rVal = remarkElem ? remarkElem.value.trim() : '';
+
+                    person.records.push({
+                        type: lType,
+                        startDate: sDate,
+                        endDate: eDate,
+                        days: dVal,
+                        remark: rVal
+                    });
+                    addedRecordsCount++;
+                }
+            }
+
+            if (addedRecordsCount === 0) return alert('กรุณาระบุช่วงวันที่อย่างน้อย 1 รายการครับ');
+
+            saveData();
+            alert(`บันทึกรายการย่อยสำเร็จ จำนวน ${addedRecordsCount} รายการครับ`);
+            
+            for (let i = 1; i <= TOTAL_INPUT_SETS; i++) {
+                if (document.getElementById(`startDate${i}`)) document.getElementById(`startDate${i}`).value = '';
+                if (document.getElementById(`endDate${i}`)) document.getElementById(`endDate${i}`).value = '';
+                if (document.getElementById(`days${i}`)) document.getElementById(`days${i}`).value = '0';
+                if (document.getElementById(`remark${i}`)) document.getElementById(`remark${i}`).value = '';
+            }
+            if (window.innerWidth < 1024) toggleMobileActionForm();
+        });
+
+        document.getElementById('lateMultiForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const lateDate = document.getElementById('lateDate').value;
+            if (!lateDate) return alert('กรุณาเลือกวันที่');
+            for (let i = 1; i <= 10; i++) {
+                const val = document.getElementById(`latePerson${i}`).value;
+                if (val) {
+                    let person = people.find(p => String(p.id) === String(val));
+                    if (person) {
+                        if (!person.records) person.records = [];
+                        person.records.push({ type: 'ไม่เข้าแถว', startDate: lateDate, endDate: lateDate, days: 1 });
+                    }
+                }
+            }
+            saveData();
+            alert('บันทึกการขาดแถวเรียบร้อยแล้วครับ');
+            if (window.innerWidth < 1024) toggleMobileActionForm();
+        });
+
+        document.getElementById('ceremonyRecordMultiForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const cDate = document.getElementById('ceremonyRecordDate').value;
+            const cSet = document.getElementById('selectCeremonySet').value;
+            if (!cDate || !cSet) return alert('กรุณาระบุวันที่และเลือกชุดพิธีครับ');
+
+            let addedCount = 0;
+            for (let i = 1; i <= 12; i++) {
+                const personIdElem = document.getElementById(`ceremonyPerson${i}`);
+                const statusElem = document.getElementById(`ceremonyStatus${i}`);
+                const remarkElem = document.getElementById(`ceremonyRemark${i}`);
+                if (personIdElem && personIdElem.value) {
+                    let person = people.find(p => String(p.id) === String(personIdElem.value));
+                    if (person) {
+                        let statusVal = statusElem ? statusElem.value : '';
+                        if (!statusVal) continue;
+
+                        if (!person.records) person.records = [];
+                        let remarkVal = remarkElem ? remarkElem.value.trim() : '';
+                        
+                        let statusText = 'เข้าร่วม';
+                        if (statusVal === 'absent') statusText = 'ขาด';
+                        else if (statusVal === 'duty') statusText = 'เวร';
+                        else if (statusVal === 'sub') statusText = 'เวรแทน';
+
+                        let finalRemark = `${cSet} (${statusText})`;
+                        if (remarkVal) finalRemark += ` - ${remarkVal}`;
+
+                        person.records.push({ type: 'ร่วมพิธี', startDate: cDate, endDate: cDate, days: 1, remark: finalRemark });
+                        addedCount++;
+                    }
+                }
+            }
+            if (addedCount === 0) return alert('กรุณาเลือกเจ้าหน้าที่และกำหนดสถานะอย่างน้อย 1 รายการครับ');
+            saveData();
+            document.getElementById('ceremonyRecordDate').value = '';
+            document.getElementById('selectCeremonySet').value = '';
+            document.getElementById('ceremonyRowsContainer').innerHTML = '<div class="text-xs text-gray-400 text-center py-4">กรุณาเลือกชุดพิธีก่อนครับ</div>';
+            alert(`บันทึกพิธี (${cSet}) เรียบร้อยแล้ว จำนวน ${addedCount} ท่านครับ`);
+            if (window.innerWidth < 1024) toggleMobileActionForm();
+        });
+
+        document.getElementById('gradeMultiForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const gVal = document.getElementById('selectGradeValue').value;
+            if (!gVal) return alert('กรุณาเลือกเกรด');
+            for (let i = 1; i <= 10; i++) {
+                const val = document.getElementById(`gradePerson${i}`).value;
+                if (val) {
+                    let person = people.find(p => String(p.id) === String(val));
+                    if (person) person.grade = gVal;
+                }
+            }
+            saveData();
+            alert('บันทึกเกรดเรียบร้อยแล้วครับ');
+            if (window.innerWidth < 1024) toggleMobileActionForm();
+        });
+
+        document.getElementById('achievementMultiForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const val = document.getElementById('selectAchievementValue').value;
+            if (val === '') return alert('กรุณาระบุค่าสัมฤทธิ์');
+            for (let i = 1; i <= 10; i++) {
+                const pId = document.getElementById(`achievementPerson${i}`).value;
+                if (pId) {
+                    let person = people.find(p => String(p.id) === String(pId));
+                    if (person) person.achievement = val;
+                }
+            }
+            saveData();
+            alert('บันทึกผลสัมฤทธิ์เรียบร้อยแล้วครับ');
+            if (window.innerWidth < 1024) toggleMobileActionForm();
+        });
+
+        document.getElementById('efficiencyMultiForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const val = document.getElementById('selectEfficiencyValue').value;
+            if (val === '') return alert('กรุณาระบุสิทธิ์วันลา');
+            for (let i = 1; i <= 10; i++) {
+                const pId = document.getElementById(`efficiencyPerson${i}`).value;
+                if (pId) {
+                    let person = people.find(p => String(p.id) === String(pId));
+                    if (person) person.efficiency = val;
+                }
+            }
+            saveData();
+            alert('บันทึกสิทธิ์เรียบร้อยแล้วครับ');
+            if (window.innerWidth < 1024) toggleMobileActionForm();
+        });
+
+        document.getElementById('searchInput').addEventListener('input', renderTable);
+        document.getElementById('clearBtn').addEventListener('click', () => {
+            if (confirm('ต้องการลบข้อมูลทั้งหมด?')) { people = []; saveData(); }
+        });
+
+        function deletePerson(id) {
+            if (confirm('ต้องการลบข้อมูลเจ้าหน้าที่ท่านนี้?')) {
+                people = people.filter(p => String(p.id) !== String(id));
+                saveData();
+            }
+        }
+
+        document.getElementById('excelFileInput').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(evt) {
+                try {
+                    const data = new Uint8Array(evt.target.result);
+                    const workbook = XLSX.read(data, { type: 'array' });
+                    const firstSheetName = workbook.SheetNames[0];
+                    const worksheet = workbook.Sheets[firstSheetName];
+                    const json = XLSX.utils.sheet_to_json(worksheet, { defval: "" });
+
+                    if (!json || json.length === 0) {
+                        alert('ไม่พบข้อมูลในไฟล์ที่เลือกครับ');
+                        return;
+                    }
+
+                    let newCount = 0;
+                    let updateCount = 0;
+
+                    json.forEach(row => {
+                        const fullNameRaw = String(row['ชื่อ-สกุล'] || row['ชื่อ - นามสกุล'] || row['ชื่อสกุล'] || '').trim();
+                        if (!fullNameRaw) return;
+
+                        let prefix = 'นาย';
+                        let fullName = fullNameRaw;
+                        const prefixes = ['ว่าที่ ร.ต.', 'ส.อ.', 'นาย', 'นางสาว', 'นาง'];
+                        for (let p of prefixes) {
+                            if (fullNameRaw.startsWith(p)) {
+                                prefix = p;
+                                fullName = fullNameRaw.substring(p.length).trim();
+                                break;
+                            }
+                        }
+
+                        const position = String(row['ตำแหน่ง'] || '').trim();
+                        const posLevel = String(row['ระดับตำแหน่ง'] || row['ระดับ'] || '').trim();
+                        const category = String(row['ประเภทบุคลากร'] || row['ประเภท'] || 'ข้าราชการ').trim();
+                        const affiliation = String(row['สังกัด'] || '').trim();
+                        const evaluator = String(row['ผู้ประเมิน'] || '').trim();
+                        const evaluatorPos = String(row['ตำแหน่งผู้ประเมิน'] || '').trim();
+                        const grade = String(row['เกรด'] || '').trim();
+                        const achievement = String(row['สัมฤทธิ์'] || row['สัม(ชี้วัด)'] || row['สัมฤทธิ์(ตัวชี้วัด)'] || '').trim();
+                        const efficiency = String(row['สิทธิ์(วันลา)'] || row['สิท(วันลา)'] || row['สิทธิ์'] || '').trim();
+                        
+                        let ageInput = String(row['อายุ'] || '').trim();
+                        let estimatedBirthDate = '';
+                        if (ageInput && ageInput !== '-' && !isNaN(ageInput)) {
+                            let currentYear = new Date().getFullYear();
+                            let birthYear = currentYear - parseInt(ageInput, 10);
+                            estimatedBirthDate = `${birthYear}-01-01`;
+                        }
+
+                        let inputCeremonialDress = String(row['ชุดพิธี'] || '').trim();
+
+                        const recordsStr = String(row['รายการย่อยทั้งหมด'] || row['รายการ'] || '').trim();
+                        let records = [];
+                        let extractedCeremonySet = '';
+
+                        if (recordsStr && recordsStr !== '-') {
+                            const rawRecords = recordsStr.split(/,\s*(?=\[)/);
+                            rawRecords.forEach(raw => {
+                                const match = raw.trim().match(/^\[(.*?)\]\[(.*?)วัน\]\s*([0-9\-\s]+)(?:\s*\((.*)\))?$/);
+                                if (match) {
+                                    const rType = match[1];
+                                    const rDays = parseFloat(match[2]) || 1;
+                                    const dates = match[3].trim().split(' - ');
+                                    const sDate = dates[0] ? dates[0].trim() : '';
+                                    const eDate = dates[1] ? dates[1].trim() : sDate;
+                                    const rRemark = match[4] ? match[4].trim() : '';
+                                    
+                                    if (rType === 'ร่วมพิธี' && rRemark) {
+                                        let setMatch = rRemark.match(/^(ชุดที่\s*\d+|ประธาน)/);
+                                        if (setMatch) extractedCeremonySet = setMatch[1];
+                                    }
+
+                                    records.push({
+                                        type: rType,
+                                        days: rDays,
+                                        startDate: sDate,
+                                        endDate: eDate,
+                                        remark: rRemark
+                                    });
+                                }
+                            });
+                        }
+
+                        let finalCeremonialDress = inputCeremonialDress || extractedCeremonySet || 'ชุดที่ 1';
+
+                        let existing = people.find(p => p.fullName === fullName);
+                        if (existing) {
+                            existing.prefix = prefix;
+                            existing.fullName = fullName;
+                            existing.position = position || existing.position;
+                            existing.posLevel = posLevel || existing.posLevel;
+                            existing.category = category || existing.category;
+                            existing.affiliation = affiliation || existing.affiliation;
+                            existing.evaluator = evaluator || existing.evaluator;
+                            existing.evaluatorPos = evaluatorPos || existing.evaluatorPos;
+                            if (estimatedBirthDate) existing.birthDate = estimatedBirthDate;
+                            if (finalCeremonialDress) existing.ceremonialDress = finalCeremonialDress;
+                            if (grade) existing.grade = grade;
+                            if (achievement) existing.achievement = achievement;
+                            if (efficiency) existing.efficiency = efficiency;
+                            if (records.length > 0) existing.records = records;
+                            updateCount++;
+                        } else {
+                            people.push({
+                                id: generateUniqueId(),
+                                prefix: prefix,
+                                fullName: fullName,
+                                birthDate: estimatedBirthDate,
+                                position: position,
+                                posLevel: posLevel,
+                                category: category,
+                                affiliation: affiliation,
+                                evaluator: evaluator,
+                                evaluatorPos: evaluatorPos,
+                                ceremonialDress: finalCeremonialDress,
+                                grade: grade,
+                                achievement: achievement,
+                                efficiency: efficiency,
+                                records: records
+                            });
+                            newCount++;
+                        }
+                    });
+
+                    saveData();
+                    alert(`นำเข้าข้อมูลสำเร็จแล้วครับ!\n- เพิ่มรายชื่อใหม่: ${newCount} ท่าน\n- อัปเดตข้อมูลเดิม: ${updateCount} ท่าน`);
+                    e.target.value = '';
+                } catch (err) {
+                    console.error(err);
+                    alert('เกิดข้อผิดพลาดในการอ่านไฟล์ กรุณาตรวจสอบรูปแบบไฟล์ครับ');
+                }
+            };
+            reader.readAsArrayBuffer(file);
+        });
+
+        document.getElementById('exportBtn').addEventListener('click', () => {
+            let csv = "\uFEFFลำดับ,ชื่อ-สกุล,ตำแหน่ง,ระดับตำแหน่ง,ประเภทบุคลากร,สังกัด,ผู้ประเมิน,ตำแหน่งผู้ประเมิน,อายุ,ป่วย/วัน,ป่วย/ครั้ง,กิจ/วัน,กิจ/ครั้ง,รวมวัน,รวมครั้ง,ไม่เข้าแถว,ไม่ลงนาม,ชุดพิธี,ร่วมพิธี,เกรด,สัม(ชี้วัด),สิท(วันลา),รายการ\n";
+            
+            let rowIndex = 1;
+            people.forEach((p) => {
+                let computedAge = calculateAge(p.birthDate);
+                
+                let businessDays = 0, businessCount = 0, sickDays = 0, sickCount = 0, noAssembly = 0, unsignedDays = 0, unsignedCount = 0;
+                let ceremonySetsCount = {}, ceremonyTotalDays = 0;
+                
+                let formattedRecords = [];
+                if (p.records && p.records.length > 0) {
+                    formattedRecords = p.records.map(r => {
+                        let isChronic = r.type === 'ลาป่วย' && r.remark && r.remark.includes('ป่วยเรื้อรัง');
+                        if (r.type === 'ลากิจ') { businessDays += parseFloat(r.days || 1); businessCount++; }
+                        if (r.type === 'ลาป่วย' && !isChronic) { sickDays += parseFloat(r.days || 1); sickCount++; }
+                        if (r.type === 'ไม่เข้าแถว') { noAssembly++; }
+                        if (r.type === 'ไม่ลงนาม') { unsignedDays += parseFloat(r.days || 1); unsignedCount++; }
+                        if (r.type === 'ร่วมพิธี') {
+                            if (r.remark && (r.remark.includes('(เข้าร่วม)') || r.remark.includes('(เวร)'))) {
+                                ceremonyTotalDays++;
+                            }
+                            let setKey = r.remark ? r.remark.split(' ')[0] : 'ไม่ระบุชุด';
+                            if (r.remark && (r.remark.includes('(เข้าร่วม)') || r.remark.includes('(เวร)'))) {
+                                ceremonySetsCount[setKey] = (ceremonySetsCount[setKey] || 0) + 1;
+                            }
+                        }
+
+                        let startDate = r.startDate || '';
+                        let endDate = r.endDate || r.startDate || '';
+                        let daysVal = r.days || 1;
+                        let dateStr = (startDate === endDate || !r.endDate) ? startDate : `${startDate} - ${endDate}`;
+                        let recText = `[${r.type}][${daysVal}วัน] ${dateStr}`;
+                        if (r.remark) {
+                            let cleanRemark = r.remark.replace(/\(\(เข้าร่วม\)\)/g, '(เข้าร่วม)').replace(/\(\(เวร\)\)/g, '(เวร)');
+                            recText += ` (${cleanRemark})`;
+                        }
+                        return recText;
+                    });
+                }
+
+                let displaySickDays = sickDays + unsignedDays;
+                let displaySickCount = sickCount + unsignedCount;
+                let ceremonySetSummary = Object.keys(ceremonySetsCount).join(', ');
+                let displayCeremonyDress = p.ceremonialDress || ceremonySetSummary || '-';
+                let allRecordsStr = formattedRecords.length > 0 ? formattedRecords.join(", ") : "-";
+
+                csv += `"${rowIndex++}","${p.prefix ? p.prefix + ' ' : ''}${p.fullName}","${p.position}","${p.posLevel || ''}","${p.category || ''}","${p.affiliation || ''}","${p.evaluator || ''}","${p.evaluatorPos || ''}","${computedAge}","${displaySickDays}","${displaySickCount}","${businessDays}","${businessCount}","${businessDays + displaySickDays}","${businessCount + displaySickCount}","${noAssembly}","${unsignedDays}","${displayCeremonyDress}","${ceremonyTotalDays}","${p.grade || ''}","${p.achievement || ''}","${p.efficiency || ''}","${allRecordsStr}"\n`;
+            });
+
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = `รายงานรายการย่อยท้ายตาราง_${new Date().toISOString().slice(0,10)}.csv`;
+            link.click();
+        });
+
+        renderSelect('');
+        updateMultiSelectOptions('late', '');
+        updateMultiSelectOptions('grade', '');
+        updateMultiSelectOptions('achievement', '');
+        updateMultiSelectOptions('efficiency', '');
+    </script>
+</body>
+</html>
